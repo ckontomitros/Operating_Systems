@@ -1,3 +1,5 @@
+
+
 /* schedule.c
  * This file contains the primary logic for the 
  * scheduler.
@@ -33,22 +35,22 @@ extern struct task_struct *idle;
  * to setup and destroy the scheduler cleanly.
  */
  
- /* initscheduler
-  * Sets up and allocates memory for the scheduler, as well
-  * as sets initial values. This function should also
-  * set the initial effective priority for the "seed" task 
-  * and enqueu it in the scheduler.
-  * INPUT:
-  * newrq - A pointer to an allocated rq to assign to your
-  *			local rq.
-  * seedTask - A pointer to a task to seed the scheduler and start
-  * the simulation.
-  */
+/* initscheduler
+ * Sets up and allocates memory for the scheduler, as well
+ * as sets initial values. This function should also
+ * set the initial effective priority for the "seed" task 
+ * and enqueu it in the scheduler.
+ * INPUT:
+ * newrq - A pointer to an allocated rq to assign to your
+ *			local rq.
+ * seedTask - A pointer to a task to seed the scheduler and start
+ * the simulation.
+ */
 void initschedule(struct runqueue *newrq, struct task_struct *seedTask)
 {
-	seedTask->next = seedTask->prev = seedTask;
-	newrq->head = seedTask;
-	newrq->nr_running++;
+  seedTask->next = seedTask->prev = seedTask;
+  newrq->head = seedTask;
+  newrq->nr_running++;
 	
 }
 
@@ -59,22 +61,22 @@ void initschedule(struct runqueue *newrq, struct task_struct *seedTask)
  */
 void killschedule()
 {
-	return;
+  return;
 }
 
 
 void print_rq () {
-	struct task_struct *curr;
+  struct task_struct *curr;
 	
-	printf("Rq: \n");
-	curr = rq->head;
-	if (curr)
-		printf("%p", curr);
-	while(curr->next != rq->head) {
-		curr = curr->next;
-		printf(", %p", curr);
-	};
-	printf("\n");
+  printf("Rq: \n");
+  curr = rq->head;
+  if (curr)
+    printf("%p", curr);
+  while(curr->next != rq->head) {
+    curr = curr->next;
+    printf(", %p", curr);
+  };
+  printf("\n");
 }
 
 /*-------------Scheduler Code Goes Below------------*/
@@ -85,59 +87,67 @@ void print_rq () {
  */
 void schedule()
 {
-	static struct task_struct *nxt = NULL;
-	struct task_struct *curr;
-	int i;
-	long minexp=0;
-	long maxwait=0;
-//	printf("In schedule\n");
-// 	print_rq();
+  static struct task_struct *nxt = NULL;
+  struct task_struct *curr,*todo;
+  int i;
+  long minexp=0;
+  long maxwait=0;
+  //	printf("In schedule\n");
+  // 	print_rq();
 	
-	current->need_reschedule = 0; /* Always make sure to reset that, in case *
-								   * we entered the scheduler because current*
-								   * had requested so by setting this flag   */
+  current->need_reschedule = 0; /* Always make sure to reset that, in case *
+				 * we entered the scheduler because current*
+				 * had requested so by setting this flag   */
 	
-	if (rq->nr_running == 1) {
-		context_switch(rq->head);
-		nxt = rq->head->next;
-	}
-	else {	
-		current->last_duration-=sched_clock();
-		current->last_rq_enter=sched_clock();
-		minexp=current->exp_burst=(a*current->exp_burst+current->last_duration)/(1+a);
-		
-			for(i=0;i<rq->nr_running;i++){
-			curr = nxt;
-			nxt = nxt->next;
-			if (nxt == rq->head)    
-				nxt = nxt->next;
-				if(minexp>(curr->exp_burst))
-				minexp=curr->exp_burst;
-				if(maxwait<sched_clock()-curr->last_rq_enter){
-				  maxwait=sched_clock()-curr->last_rq_enter;
-				}
+  if (rq->nr_running == 1) {
+    context_switch(rq->head);
+    nxt = rq->head->next;
+  }
+  else {	
+    current->last_duration-=sched_clock();
+    current->last_rq_enter=sched_clock();
+    minexp=current->exp_burst=(a*current->exp_burst+current->last_duration)/(1+a);//find minexp for next choice
+    todo=nxt;
+    for(i=0;i<rq->nr_running;i++){// vrisko to megisto xrono anamonis kai min exp_bust
+      curr = nxt;
+     
+      nxt = nxt->next;
+      if(nxt==NULL)
+	printf("ola kola i kariola \n");
+      if (nxt == rq->head)    //na min valei tin init
+	nxt = nxt->next;
+      if(minexp>(curr->exp_burst)){
+	minexp=curr->exp_burst;
+	todo=curr;
+      }
+      if(maxwait<sched_clock()-curr->last_rq_enter){
+	maxwait=sched_clock()-curr->last_rq_enter;
+      }
 			        
 	
-			}
-		curr->last_duration=sched_clock();
-			/* processes */
+    }
+    
+    /* processes */
 
-			printf("O curr einai %p\n",curr);
-		context_switch(curr);
-	}
-
+    if(todo!=current)
+      printf("halleloiua\n");
+    printf(" O pointer einai %p\n",todo->next);
+    nxt=todo->next;
+    context_switch(todo);
+  }
+ 
 }
 
 
 /* sched_fork
  * Sets up schedule info for a newly forked task
  */
-void sched_fork(struct task_struct *p)
+void  sched_fork(struct task_struct *p)
 {
-	p->last_duration=0;
-	p->exp_burst=0;
-	p->last_rq_enter=sched_clock();
-	p->time_slice = 100;
+  p->last_duration=0;
+  p->exp_burst=0;
+  p->last_rq_enter=sched_clock();
+  p->time_slice = 100;
 }
 
 /* scheduler_tick
@@ -146,7 +156,7 @@ void sched_fork(struct task_struct *p)
  */
 void scheduler_tick(struct task_struct *p)
 {
-	schedule();
+  schedule();
 }
 
 /* wake_up_new_task
@@ -156,12 +166,12 @@ void scheduler_tick(struct task_struct *p)
  */
 void wake_up_new_task(struct task_struct *p)
 {	
-	p->next = rq->head->next;
-	p->prev = rq->head;
-	p->next->prev = p;
-	p->prev->next = p;
+  p->next = rq->head->next;
+  p->prev = rq->head;
+  p->next->prev = p;
+  p->prev->next = p;
 	
-	rq->nr_running++;
+  rq->nr_running++;
 }
 
 /* activate_task
@@ -170,12 +180,14 @@ void wake_up_new_task(struct task_struct *p)
  */
 void activate_task(struct task_struct *p)
 {
-	p->next = rq->head->next;
-	p->prev = rq->head;
-	p->next->prev = p;
-	p->prev->next = p;
+  
+    p->next = rq->head->next;
+    p->prev = rq->head;
+    p->next->prev = p;
+    p->prev->next = p;
 	
-	rq->nr_running++;
+    rq->nr_running++;
+  
 }
 
 /* deactivate_task
@@ -183,11 +195,14 @@ void activate_task(struct task_struct *p)
  * put it to sleep.
  */
 void deactivate_task(struct task_struct *p)
-{
-	p->prev->next = p->next;
-	p->next->prev = p->prev;
-	p->next = p->prev = NULL; /* Make sure to set them to NULL *
-							   * next is checked in cpu.c      */
+{ 
+  
+    p->prev->next = p->next;
+    p->next->prev = p->prev;
+    p->next = p->prev = NULL; /* Make sure to set them to NULL *
+			     * next is checked in cpu.c      */
+  
+    rq->nr_running--;
+ 
 
-	rq->nr_running--;
 }
