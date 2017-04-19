@@ -96,7 +96,6 @@ void schedule()
   long min_goodness;
   //	printf("In schedule\n");
   // 	print_rq();
-	
   current->need_reschedule = 0; /* Always make sure to reset that, in case *
 				 * we entered the scheduler because current*
 				 * had requested so by setting this flag   */
@@ -108,16 +107,14 @@ void schedule()
   else {	
     last_duration=sched_clock()-current->last_cpu_taken;
     current->last_rq_enter=sched_clock();
-    minexp=current->exp_burst=(a*current->exp_burst+last_duration)/(1+a);
+    current->exp_burst=(a*current->exp_burst+last_duration)/(1+a);
     //find minexp for next choice
-    todo=nxt;
+    minexp=rq->head->next->exp_burst;
     for(i=0;i<rq->nr_running;i++){// vrisko to megisto xrono anamonis kai min exp_bust
-      curr = nxt;
-     
-      nxt = nxt->next;
-      
       if (nxt == rq->head)    //na min valei tin init
 	nxt = nxt->next;
+      curr = nxt;
+      nxt = nxt->next;
       if(minexp>(curr->exp_burst)){
 	minexp=curr->exp_burst;
       }
@@ -125,18 +122,22 @@ void schedule()
 	maxwait=sched_clock()-curr->last_rq_enter;
       }
     }
-    min_goodness=((1+current->exp_burst)/(minexp+1))*((maxwait+1)/1+sched_clock()-current->last_rq_enter);
+    min_goodness=((1+rq->head->next->exp_burst)/(minexp+1))*((maxwait+1)/1+sched_clock()-rq->head->next->last_rq_enter);
+  
+      todo=rq->head->next;
     for(i=0;i<rq->nr_running;i++){// vrisko to megisto xrono anamonis kai min exp_bust
+      if (nxt == rq->head)    //na min valei tin init
+	nxt = nxt->next;
       curr = nxt;
       nxt = nxt->next;
       curr->goodness=((1+curr->exp_burst)/(minexp+1))*((maxwait+1)/1+sched_clock()-curr->last_rq_enter);
-      if(curr->goodness<min_goodness){
+      if((curr->goodness<min_goodness)&&(curr!=rq->head)){
 	min_goodness=curr->goodness;
 	todo=curr;
+ 
       }
 	
-      if (nxt == rq->head)    //na min valei tin init
-	nxt = nxt->next;
+     
     }
     //last_duration einai otan pairnei cpu
     /* processes */
@@ -144,9 +145,18 @@ void schedule()
     if(current!=todo)
       todo->last_cpu_taken=sched_clock();
 
- 
-    nxt=todo->next;
-    context_switch(todo);
+    if(todo->next==rq->head)
+      nxt=todo->next->next;
+    else
+      nxt=todo->next;
+    if(todo==rq->head){
+      
+      printf("####Mpike i init mesa\n");
+    }
+    
+      context_switch(todo);
+    
+    
   }
  
 }
