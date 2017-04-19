@@ -92,6 +92,7 @@ void schedule()
   int i;
   long minexp=0;
   long maxwait=0;
+  long last_duration=0;
   //	printf("In schedule\n");
   // 	print_rq();
 	
@@ -104,9 +105,9 @@ void schedule()
     nxt = rq->head->next;
   }
   else {	
-    current->last_duration=sched_clock()-current->last_duration;
+    last_duration=sched_clock()-current->last_cpu_taken;
     current->last_rq_enter=sched_clock();
-    minexp=current->exp_burst=(a*current->exp_burst+current->last_duration)/(1+a);//find minexp for next choice
+    minexp=current->exp_burst=(a*current->exp_burst+last_duration)/(1+a);//find minexp for next choice
     todo=nxt;
     for(i=0;i<rq->nr_running;i++){// vrisko to megisto xrono anamonis kai min exp_bust
       curr = nxt;
@@ -125,11 +126,13 @@ void schedule()
 			        
 	
     }
-    todo->last_duration=sched_clock();
+    //last_duration einai otan pairnei cpu
     /* processes */
 
-    
-    printf(" O pointer einai %p\n",todo->next);
+    if(current!=todo)
+      todo->last_cpu_taken=sched_clock();
+
+ 
     nxt=todo->next;
     context_switch(todo);
   }
@@ -142,7 +145,7 @@ void schedule()
  */
 void  sched_fork(struct task_struct *p)
 {
-  p->last_duration=0;
+  p->last_cpu_taken=0;
   p->exp_burst=0;
   p->last_rq_enter=sched_clock();
   p->time_slice = 100;

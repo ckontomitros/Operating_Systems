@@ -30,7 +30,7 @@ struct task_struct
 										   NULL when the process is not in the
 										   runqueue */
 /* ---------------- Do NOT Touch END-------------- */
-  long last_duration;
+  long last_cpu_taken;
   long exp_burst;
   long last_rq_enter;
 };
