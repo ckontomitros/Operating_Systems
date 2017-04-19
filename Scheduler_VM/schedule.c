@@ -104,7 +104,7 @@ void schedule()
     nxt = rq->head->next;
   }
   else {	
-    current->last_duration-=sched_clock();
+    current->last_duration=sched_clock()-current->last_duration;
     current->last_rq_enter=sched_clock();
     minexp=current->exp_burst=(a*current->exp_burst+current->last_duration)/(1+a);//find minexp for next choice
     todo=nxt;
@@ -112,8 +112,7 @@ void schedule()
       curr = nxt;
      
       nxt = nxt->next;
-      if(nxt==NULL)
-	printf("ola kola i kariola \n");
+      
       if (nxt == rq->head)    //na min valei tin init
 	nxt = nxt->next;
       if(minexp>(curr->exp_burst)){
@@ -126,11 +125,10 @@ void schedule()
 			        
 	
     }
-    
+    todo->last_duration=sched_clock();
     /* processes */
 
-    if(todo!=current)
-      printf("halleloiua\n");
+    
     printf(" O pointer einai %p\n",todo->next);
     nxt=todo->next;
     context_switch(todo);
@@ -185,7 +183,7 @@ void activate_task(struct task_struct *p)
     p->prev = rq->head;
     p->next->prev = p;
     p->prev->next = p;
-	
+    p->last_rq_enter=sched_clock();
     rq->nr_running++;
   
 }
