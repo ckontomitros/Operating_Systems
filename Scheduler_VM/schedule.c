@@ -93,6 +93,7 @@ void schedule()
   long minexp=0;
   long maxwait=0;
   long last_duration=0;
+  long min_goodness;
   //	printf("In schedule\n");
   // 	print_rq();
 	
@@ -107,7 +108,8 @@ void schedule()
   else {	
     last_duration=sched_clock()-current->last_cpu_taken;
     current->last_rq_enter=sched_clock();
-    minexp=current->exp_burst=(a*current->exp_burst+last_duration)/(1+a);//find minexp for next choice
+    minexp=current->exp_burst=(a*current->exp_burst+last_duration)/(1+a);
+    //find minexp for next choice
     todo=nxt;
     for(i=0;i<rq->nr_running;i++){// vrisko to megisto xrono anamonis kai min exp_bust
       curr = nxt;
@@ -118,13 +120,23 @@ void schedule()
 	nxt = nxt->next;
       if(minexp>(curr->exp_burst)){
 	minexp=curr->exp_burst;
-	todo=curr;
       }
       if(maxwait<sched_clock()-curr->last_rq_enter){
 	maxwait=sched_clock()-curr->last_rq_enter;
       }
-			        
+    }
+    min_goodness=((1+current->exp_burst)/(minexp+1))*((maxwait+1)/1+sched_clock()-current->last_rq_enter);
+    for(i=0;i<rq->nr_running;i++){// vrisko to megisto xrono anamonis kai min exp_bust
+      curr = nxt;
+      nxt = nxt->next;
+      curr->goodness=((1+curr->exp_burst)/(minexp+1))*((maxwait+1)/1+sched_clock()-curr->last_rq_enter);
+      if(curr->goodness<min_goodness){
+	min_goodness=curr->goodness;
+	todo=curr;
+      }
 	
+      if (nxt == rq->head)    //na min valei tin init
+	nxt = nxt->next;
     }
     //last_duration einai otan pairnei cpu
     /* processes */

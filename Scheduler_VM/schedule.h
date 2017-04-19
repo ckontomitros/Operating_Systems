@@ -33,6 +33,7 @@ struct task_struct
   long last_cpu_taken;
   long exp_burst;
   long last_rq_enter;
+  long goodness;
 };
 
 /* runqueue */
