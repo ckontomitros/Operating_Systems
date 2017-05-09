@@ -319,10 +319,10 @@ static void *slob_alloc(size_t size, gfp_t gfp, int align, int node)
 		/* Enough room on this page? */
 		if (sp->units < SLOB_UNITS(size))
 			continue;
-
+		b = slob_page_alloc(sp, size, align);
 #ifndef SLOB_BESTFIT		/* Attempt to alloc */
 		prev = sp->list.prev;
-		b = slob_page_alloc(sp, size, align);
+		
 #else
 		if(min_sp_units>sp->units||i==0){
 		  if (!b)
