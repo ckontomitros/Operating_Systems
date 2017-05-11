@@ -69,7 +69,7 @@
 #include <linux/kmemleak.h>
 
 #include <trace/events/kmem.h>
-
+#include <linux/linkage.h>
 #include <linux/atomic.h>
 
 #include "slab.h"
@@ -101,7 +101,11 @@ typedef struct slob_block slob_t;
 static LIST_HEAD(free_slob_small);
 static LIST_HEAD(free_slob_medium);
 static LIST_HEAD(free_slob_large);
-
+static int times=0;
+static long free_space=0;
+static long total_space=0;
+long *call_total=&total_space;
+long *call_free=&free_space;
 /*
  * slob_page_free: true for pages on free_slob_pages list.
  */
@@ -209,7 +213,9 @@ static void slob_free_pages(void *b, int order)
 {
 	if (current->reclaim_state)
 		current->reclaim_state->reclaimed_slab += 1 << order;
+
 	free_pages((unsigned long)b, order);
+
 }
 
 /*
@@ -222,7 +228,8 @@ static void *slob_page_alloc(struct page *sp, size_t size, int align)
   int min_avail;
   int i=0;
   slobidx_t avail;
-  printk("Slob Alloc candidate block sizes: ");
+  if(times==6000)
+    printk("Slob Alloc candidate block sizes: ");
 	for (prev = NULL, cur = sp->freelist; ; prev = cur, cur = slob_next(cur)) {
 		avail = slob_units(cur);
 
@@ -232,7 +239,8 @@ static void *slob_page_alloc(struct page *sp, size_t size, int align)
 		}
 #ifdef SLOB_BESTFIT
 		if((avail>= units + delta)&&(i==0||(avail-units-delta<min_avail))){
-		  printk(" %d ",avail);
+		  if(times==6000)
+		     printk(" %d ",avail);
 		  i=1;
 		  best_block=cur;
 		  best_block_prev=prev;
@@ -243,7 +251,11 @@ static void *slob_page_alloc(struct page *sp, size_t size, int align)
 		if (slob_last(cur))
 		  break;
 	}
-	printk("\n");
+	if(times==6000){
+	  printk("\n");
+	  times=0;
+	}else
+	  times++;
 	if(i==0)
 	  return NULL;
 	cur=best_block;
@@ -382,6 +394,7 @@ static void *slob_alloc(size_t size, gfp_t gfp, int align, int node)
 			continue;
 		break;
 	*/
+	
 #endif
 #ifndef SLOB_BESTFIT 
 		if (!b)
@@ -390,20 +403,29 @@ static void *slob_alloc(size_t size, gfp_t gfp, int align, int node)
 		/* Improve fragment distribution and reduce our average
 		 * search time by starting our next search here. (see
 		 * Knuth vol 1, sec 2.5, pg 449) */
-  
+		f
 		if (prev != slob_list->prev &&
 		    slob_list->next != prev->next)
 		  list_move_tail(slob_list, prev->next);
 		break;
               }
-#endif
-
+#endif 
+        free_space=0;
+        list_for_each_entry(sp,  &free_slob_small, list) {
+	  free_space+=sp->units;
+	}
+         list_for_each_entry(sp,  &free_slob_medium, list) {
+	   free_space+=sp->units;
+	}
+         list_for_each_entry(sp,  &free_slob_large, list) {
+	   free_space+=sp->units;
+	}
 	spin_unlock_irqrestore(&slob_lock, flags);
 
 	/* Not enough space: must allocate a new page */
 
             if (!b) {
-
+	      
 		b = slob_new_pages(gfp & ~__GFP_ZERO, 0, node);
 		if (!b)
 			return NULL;
@@ -412,6 +434,7 @@ static void *slob_alloc(size_t size, gfp_t gfp, int align, int node)
 
 		spin_lock_irqsave(&slob_lock, flags);
 		sp->units = SLOB_UNITS(PAGE_SIZE);
+		total_space+=sp->units;
 		sp->freelist = b;
 		INIT_LIST_HEAD(&sp->list);
 		set_slob(b, SLOB_UNITS(PAGE_SIZE), b + SLOB_UNITS(PAGE_SIZE));
@@ -447,8 +470,10 @@ static void slob_free(void *block, int size)
 
 	if (sp->units + units == SLOB_UNITS(PAGE_SIZE)) {
 		/* Go directly to page allocator. Do not pass slob allocator */
-		if (slob_page_free(sp))
-			clear_slob_page_free(sp);
+	  if (slob_page_free(sp)){
+	    	total_space-=sp->units;
+	    clear_slob_page_free(sp);
+	  }
 		spin_unlock_irqrestore(&slob_lock, flags);
 		__ClearPageSlab(sp);
 		page_mapcount_reset(sp);
